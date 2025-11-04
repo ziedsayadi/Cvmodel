@@ -3,6 +3,7 @@ import type { CVData, TechnologyCategory, Experience, CustomSection } from "../t
 import PrintableCVContent from "./PrintableCVContent";
 import { useState, useEffect } from 'react';
 import { createCustomSection } from '../utils/cvHelpers';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export interface CVEditorProps {
   data: CVData;
@@ -23,6 +24,7 @@ const CVEditor: React.FC<CVEditorProps> = ({
 }) => {
   const [activeSection, setActiveSection] = useState<string>("personal");
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(data.personalInfo.avatarUrl || null);
+  const { t } = useLanguage();
 
   // Effect to update preview URL if data.personalInfo.avatarUrl changes
   useEffect(() => {
@@ -272,17 +274,17 @@ const CVEditor: React.FC<CVEditorProps> = ({
   // ---------------------------------------
 
   const sections = [
-    { id: "personal", label: "Informations Personnelles", icon: "👤" },
-    { id: "profile", label: "Profil Professionnel", icon: "📝" },
-    { id: "contact", label: "Contact", icon: "📧" },
-    { id: "skills", label: "Compétences", icon: "⚡" },
-    { id: "technologies", label: "Technologies", icon: "💻" },
-    { id: "experiences", label: "Expériences", icon: "💼" },
-    { id: "languages", label: "Langues", icon: "🌐" },
-    { id: "certifications", label: "Certifications", icon: "🏆" },
+    { id: "personal", label: t('personalInfo'), icon: "👤" },
+    { id: "profile", label: t('profile'), icon: "📝" },
+    { id: "contact", label: t('contact'), icon: "📧" },
+    { id: "skills", label: t('skills'), icon: "⚡" },
+    { id: "technologies", label: t('technologies'), icon: "💻" },
+    { id: "experiences", label: t('experiences'), icon: "💼" },
+    { id: "languages", label: t('languages'), icon: "🌐" },
+    { id: "certifications", label: t('certifications'), icon: "🏆" },
     ...data.customSections.map(section => ({
       id: section.id,
-      label: section.title || "Section Personnalisée",
+      label: section.title || t('customSection'),
       icon: "📑"
     }))
   ];
@@ -297,7 +299,7 @@ const CVEditor: React.FC<CVEditorProps> = ({
       <div className="bg-gray-800 text-white p-4 flex justify-between items-center shadow-lg">
         <div className="flex items-center gap-3">
           <Edit size={24} />
-          <h2 className="text-xl font-bold">Éditeur de CV</h2>
+          <h2 className="text-xl font-bold">{t('editor')}</h2>
         </div>
 
         <div className="flex gap-2">
@@ -306,7 +308,7 @@ const CVEditor: React.FC<CVEditorProps> = ({
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
           >
             {isPreviewMode ? <Edit size={18} /> : <Eye size={18} />}
-            {isPreviewMode ? "Éditer" : "Aperçu"}
+            {isPreviewMode ? t('edit') : t('preview')}
           </button>
 
           <button
@@ -314,7 +316,7 @@ const CVEditor: React.FC<CVEditorProps> = ({
             className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg transition-colors"
           >
             <RotateCcw size={18} />
-            Réinitialiser
+            {t('reset')}
           </button>
 
           <button
@@ -322,7 +324,7 @@ const CVEditor: React.FC<CVEditorProps> = ({
             className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
           >
             <Save size={18} />
-            Sauvegarder
+            {t('save')}
           </button>
         </div>
       </div>

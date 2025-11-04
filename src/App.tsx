@@ -1,8 +1,9 @@
-import  { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import CVTemplate from './components/CVTemplate';
 import CVEditor from './components/CVEditor';
 import { useCVData } from './hooks/useCVData';
 import { processPDFToCV } from './utils/pdfExtractor';
+import { useLanguage } from './contexts/LanguageContext';
 import Spinner from './components/Spinner';
 
 function App() {
@@ -10,6 +11,9 @@ function App() {
   const [isProcessingPDF, setIsProcessingPDF] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { cvData, updateCVData, saveCVData, resetCVData, createNewCV, loadCVData, hasUnsavedChanges } = useCVData();
+  const { t, translatedCV, setTranslatedCV } = useLanguage();
+
+  const displayData = translatedCV || cvData;
 
   const handleSave = () => {
     const success = saveCVData();
@@ -78,7 +82,7 @@ function App() {
     <div className="App">
       {isEditMode ? (
         <CVEditor
-          data={cvData}
+          data={displayData}
           onUpdate={updateCVData}
           onSave={handleSave}
           onReset={handleReset}
@@ -134,7 +138,7 @@ function App() {
               className="hidden"
             />
           </div>
-          <CVTemplate data={cvData} />
+          <CVTemplate data={displayData} />
         </div>
       )}
     </div>

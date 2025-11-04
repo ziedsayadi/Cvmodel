@@ -3,15 +3,11 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// ---------------------------
-// ✅ CORS
-// ---------------------------
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
@@ -26,134 +22,179 @@ app.use(
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        console.log("CORS blocked:", origin);
         callback(new Error("Not allowed by CORS"));
       }
     },
   })
 );
 
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "20mb" }));
 
-// ---------------------------
-// ✅ Gemini Client with v1 API
-// ---------------------------
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// ✅ CRITICAL FIX: Use gemini-pro (most stable and widely available)
-const model = genAI.getGenerativeModel({
-  model: "models/gemini-2.5-flash"  // This model is available on all API keys
+const primaryModel = genAI.getGenerativeModel({
+  model: "models/gemini-2.0-flash-exp"
 });
 
-console.log("✅ Using Gemini model: gemini-pro");
+const fallbackModel = genAI.getGenerativeModel({
+  model: "models/gemini-1.5-flash"
+});
 
-// =======================================================================
-// ✅ UTIL — Split text into safe chunks by character count
-// =======================================================================
-function splitIntoChunks(text, maxLength = 1500) {
+const chunkCache = new Map();
+
+function smartSplitChunks(text, maxLength = 1000) {
   const chunks = [];
   let current = "";
 
-  for (const part of text.split(" ")) {
-    if ((current + part).length > maxLength) {
+  const words = text.split(" ");
+
+  for (const word of words) {
+    const testChunk = current + (current ? " " : "") + word;
+
+    if (testChunk.length > maxLength && current) {
       chunks.push(current.trim());
-      current = part + " ";
+      current = word;
     } else {
-      current += part + " ";
+      current = testChunk;
     }
   }
 
-  if (current.trim().length > 0) chunks.push(current.trim());
-  return chunks;
+  if (current.trim()) {
+    chunks.push(current.trim());
+  }
+
+  return chunks.filter(c => c.length > 0);
 }
 
-// =======================================================================
-// ✅ UTIL — Retry wrapper (solves 429 Too Many Requests)
-// =======================================================================
-async function withRetry(fn, retries = 4) {
-  let delay = 400;
+async function withRetryAndFallback(fn, retries = 4) {
+  let delay = 300;
+
   for (let i = 0; i < retries; i++) {
     try {
-      return await fn();
+      return await fn(primaryModel);
     } catch (err) {
       const is429 = err.status === 429 || `${err}`.includes("429");
       const is503 = err.status === 503 || `${err}`.includes("503");
-      
+
       if (is429 || is503) {
-        console.log(`🔄 Gemini ${err.status || '429'} — retry ${i + 1}/${retries} in ${delay}ms`);
+        if (i === 2) {
+          try {
+            return await fn(fallbackModel);
+          } catch (fallbackErr) {
+            console.error("Fallback model failed:", fallbackErr.message);
+          }
+        }
+
         if (i < retries - 1) {
           await new Promise((r) => setTimeout(r, delay));
           delay *= 2;
         }
       } else {
-        // If it's not a rate limit error, throw immediately
-        console.error("❌ Non-retryable error:", err.message);
         throw err;
       }
     }
   }
-  throw new Error("Gemini error after retries");
+  throw new Error("Translation failed after retries");
 }
 
-// =======================================================================
-// ✅ CHUNK-BASED TRANSLATION
-// =======================================================================
-async function translateChunk(text, targetLang) {
-  const prompt = `
-Translate this EXACT text into **${targetLang}**.
-If the source text contains any spelling or grammar mistakes, 
-correct them naturally in the translation — but keep the original meaning.
-Do NOT modify numbers, URLs, code, or formatting.
-Return ONLY the translated text, nothing else.
+async function translateChunk(text, targetLang, model = primaryModel) {
+  const cacheKey = `${targetLang}:${text.substring(0, 50)}`;
+
+  if (chunkCache.has(cacheKey)) {
+    return chunkCache.get(cacheKey);
+  }
+
+  const prompt = `You are a highly reliable translation engine.
+Translate ONLY human-readable text values in this JSON to ${targetLang}.
+
+STRICT RULES:
+- DO NOT change JSON keys.
+- DO NOT change array structure.
+- DO NOT translate identifiers, ids, keys, URLs, emails, or paths.
+- DO NOT add new fields.
+- DO NOT remove any fields.
+- Return ONLY valid JSON.
+- If you cannot translate a value, keep it unchanged.
+- Preserve formatting and punctuation.
+- Fix any spelling or grammar mistakes naturally.
 
 TEXT:
 ${text}
 `;
 
-  const result = await withRetry(() =>
-    model.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-    })
-  );
+  const result = await model.generateContent({
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+  });
 
-  return result.response.text().trim();
+  const translated = result.response.text().trim();
+  chunkCache.set(cacheKey, translated);
+
+  return translated;
 }
 
-// =======================================================================
-// ✅ MAIN CHUNK TRANSLATION HANDLER
-//    Takes a big JSON → extracts strings → translates chunk-by-chunk
-// =======================================================================
-async function translateJSONByChunks(targetLang, originalJson) {
-  // Convert JSON to string
-  const jsonStr = JSON.stringify(originalJson);
+function healJSON(jsonString) {
+  let healed = jsonString.trim();
 
-  // Split based on chars, not objects (fast, simple, safe)
-  const chunks = splitIntoChunks(jsonStr, 1800);
+  healed = healed.replace(/,\s*}/g, "}");
+  healed = healed.replace(/,\s*]/g, "]");
+  healed = healed.replace(/}\s*{/g, "},{");
+  healed = healed.replace(/]\s*\[/g, "],[");
 
-  console.log(`✅ Translation chunks: ${chunks.length}`);
-
-  // Translate sequentially (safe for rate limits)
-  let translated = "";
-
-  for (const chunk of chunks) {
-    const translatedChunk = await translateChunk(chunk, targetLang);
-    translated += translatedChunk;
+  if (!healed.startsWith("{") && !healed.startsWith("[")) {
+    healed = "{" + healed;
   }
 
-  // Try rebuilding JSON
-  try {
-    const fixed = translated.replace(/,\s*}/g, "}").replace(/,\s*]/g, "]");
-    return JSON.parse(fixed);
-  } catch (err) {
-    console.error("❌ JSON rebuild failed:", translated);
-    throw new Error("Failed to rebuild translated JSON");
+  if (!healed.endsWith("}") && !healed.endsWith("]")) {
+    healed = healed + "}";
   }
+
+  const openBraces = (healed.match(/{/g) || []).length;
+  const closeBraces = (healed.match(/}/g) || []).length;
+  const openBrackets = (healed.match(/\[/g) || []).length;
+  const closeBrackets = (healed.match(/]/g) || []).length;
+
+  if (openBraces > closeBraces) {
+    healed += "}".repeat(openBraces - closeBraces);
+  }
+  if (openBrackets > closeBrackets) {
+    healed += "]".repeat(openBrackets - closeBrackets);
+  }
+
+  return healed;
 }
 
-// =======================================================================
-// ✅ API: /api/translate (chunked version)
-// =======================================================================
-app.post("/api/translate", async (req, res) => {
+async function translateInParallel(chunks, targetLang, maxConcurrent = 3) {
+  const results = new Array(chunks.length);
+  const queue = chunks.map((chunk, index) => ({ chunk, index }));
+
+  const workers = [];
+
+  for (let i = 0; i < maxConcurrent; i++) {
+    workers.push(
+      (async () => {
+        while (queue.length > 0) {
+          const item = queue.shift();
+          if (!item) break;
+
+          try {
+            const translated = await withRetryAndFallback(
+              (model) => translateChunk(item.chunk, targetLang, model)
+            );
+            results[item.index] = translated;
+          } catch (err) {
+            console.error(`Chunk ${item.index} failed:`, err.message);
+            results[item.index] = item.chunk;
+          }
+        }
+      })()
+    );
+  }
+
+  await Promise.all(workers);
+  return results;
+}
+
+app.post("/api/translate-fast", async (req, res) => {
   try {
     const { targetLang, data } = req.body;
 
@@ -161,17 +202,27 @@ app.post("/api/translate", async (req, res) => {
       return res.status(400).json({ error: "targetLang and data required" });
     }
 
-    const result = await translateJSONByChunks(targetLang, data);
-    res.json(result);
+    const jsonStr = JSON.stringify(data);
+    const chunks = smartSplitChunks(jsonStr, 1000);
+
+    const translatedChunks = await translateInParallel(chunks, targetLang, 5);
+
+    const combined = translatedChunks.join("");
+    const healed = healJSON(combined);
+
+    try {
+      const result = JSON.parse(healed);
+      res.json(result);
+    } catch (parseErr) {
+      console.error("JSON parse failed:", healed.substring(0, 200));
+      throw new Error("Failed to parse translated JSON");
+    }
   } catch (err) {
-    console.error("❌ translate error:", err);
+    console.error("Fast translate error:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// =======================================================================
-// ✅ STREAMING VERSION OF CHUNK TRANSLATION (REAL-TIME TYPING MODE)
-// =======================================================================
 app.post("/api/translate-stream", async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -186,50 +237,63 @@ app.post("/api/translate-stream", async (req, res) => {
     }
 
     const jsonStr = JSON.stringify(data);
-    const chunks = splitIntoChunks(jsonStr, 1800);
+    const chunks = smartSplitChunks(jsonStr, 1000);
 
     res.write(`event: start\ndata: ${JSON.stringify({ chunks: chunks.length })}\n\n`);
+
+    const translatedChunks = [];
 
     for (let i = 0; i < chunks.length; i++) {
       const part = chunks[i];
 
       try {
-        const translated = await translateChunk(part, targetLang);
+        const translated = await withRetryAndFallback(
+          (model) => translateChunk(part, targetLang, model)
+        );
+
+        translatedChunks.push(translated);
 
         res.write(
           `event: chunk\ndata: ${JSON.stringify({
             index: i,
-            text: translated
+            text: translated,
+            progress: Math.round(((i + 1) / chunks.length) * 100)
           })}\n\n`
         );
 
-        // Small delay = human typing-like
-        await new Promise((r) => setTimeout(r, 100));
+        await new Promise((r) => setTimeout(r, 50));
       } catch (chunkError) {
-        console.error(`❌ Error on chunk ${i}:`, chunkError.message);
-        res.write(`event: error\ndata: ${JSON.stringify({ 
-          error: `Translation failed at chunk ${i}: ${chunkError.message}` 
+        console.error(`Error on chunk ${i}:`, chunkError.message);
+        res.write(`event: error\ndata: ${JSON.stringify({
+          error: `Translation failed at chunk ${i}: ${chunkError.message}`
         })}\n\n`);
         res.end();
         return;
       }
     }
 
-    res.write("event: done\ndata: {}\n\n");
+    const combined = translatedChunks.join("");
+    const healed = healJSON(combined);
+
+    try {
+      JSON.parse(healed);
+      res.write("event: done\ndata: {}\n\n");
+    } catch (err) {
+      res.write(`event: error\ndata: ${JSON.stringify({
+        error: "Failed to validate final JSON"
+      })}\n\n`);
+    }
+
     res.end();
   } catch (err) {
-    console.error("❌ stream error:", err);
+    console.error("Stream error:", err);
     res.write(`event: error\ndata: ${JSON.stringify({ error: err.message })}\n\n`);
     res.end();
   }
 });
 
-// =====================================================================
-// ✅ CV EXTRACTION (PDF → Text → Structured JSON)
-// =====================================================================
 async function extractCVData(text) {
-  const prompt = `
-You are a CV parser. Return ONLY valid JSON matching exactly this schema:
+  const prompt = `You are a CV parser. Return ONLY valid JSON matching exactly this schema:
 
 {
   "personalInfo": { "fullName": "", "professionalTitle": "", "avatarUrl": "" },
@@ -262,7 +326,7 @@ ${text}
 `;
 
   try {
-    const result = await model.generateContent(prompt);
+    const result = await primaryModel.generateContent(prompt);
     let output = result.response.text().trim();
 
     if (output.includes("```")) {
@@ -275,14 +339,11 @@ ${text}
 
     return JSON.parse(jsonMatch[0]);
   } catch (err) {
-    console.error("❌ CV extraction error:", err);
+    console.error("CV extraction error:", err);
     throw new Error("Failed to extract CV: " + err.message);
   }
 }
 
-// =====================================================================
-// ✅ API: /api/extract-cv
-// =====================================================================
 app.post("/api/extract-cv", async (req, res) => {
   try {
     const { text } = req.body;
@@ -291,64 +352,54 @@ app.post("/api/extract-cv", async (req, res) => {
     const cvData = await extractCVData(text);
     res.json(cvData);
   } catch (err) {
-    console.error("❌ Extract CV endpoint:", err);
+    console.error("Extract CV endpoint:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// =====================================================================
-// ✅ TEST ENDPOINT - Check if model is working
-// =====================================================================
 app.get("/api/test-model", async (req, res) => {
   try {
-    const result = await model.generateContent("Say 'Model is working!' in one sentence.");
-    res.json({ 
-      success: true, 
+    const result = await primaryModel.generateContent("Say 'Model is working!' in one sentence.");
+    res.json({
+      success: true,
       response: result.response.text(),
-      model: "gemini-1.5-flash",
+      model: "gemini-2.0-flash-exp",
       apiVersion: "v1"
     });
   } catch (err) {
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: err.message,
       details: err.toString()
     });
   }
 });
 
-// =====================================================================
-// ✅ LIST AVAILABLE MODELS (helpful for debugging)
-// =====================================================================
-  app.get("/api/list-models", async (req, res) => {
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models?key=${process.env.GEMINI_API_KEY}`
-      );
+app.get("/api/list-models", async (req, res) => {
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1/models?key=${process.env.GEMINI_API_KEY}`
+    );
 
-      const data = await response.json();
+    const data = await response.json();
 
-      if (data.error) {
-        return res.status(500).json({ success: false, error: data.error.message });
-      }
-
-      res.json({
-        success: true,
-        availableModels: data.models.map(m => m.name),
-      });
-    } catch (err) {
-      res.status(500).json({
-        success: false,
-        error: err.message,
-      });
+    if (data.error) {
+      return res.status(500).json({ success: false, error: data.error.message });
     }
-  });
 
-// =====================================================================
-// ✅ Start server
-// =====================================================================
+    res.json({
+      success: true,
+      availableModels: data.models.map(m => m.name),
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
 app.listen(PORT, () => {
-  console.log(`✅ Server running at http://localhost:${PORT}`);
-  console.log(`🧪 Test model at: http://localhost:${PORT}/api/test-model`);
-  console.log(`📋 List models at: http://localhost:${PORT}/api/list-models`);
+  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`Test model at: http://localhost:${PORT}/api/test-model`);
 });
