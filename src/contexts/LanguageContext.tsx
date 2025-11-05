@@ -12,6 +12,8 @@ interface LanguageContextType {
   setIsTranslating: (value: boolean) => void;
   translationProgress: number;
   setTranslationProgress: (value: number) => void;
+  translationCache: Map<string, CVData>;
+  clearTranslationCache: () => void;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -21,6 +23,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [translatedCV, setTranslatedCV] = useState<CVData | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
   const [translationProgress, setTranslationProgress] = useState(0);
+  const [translationCache] = useState<Map<string, CVData>>(new Map());
   const [currentUITranslations, setCurrentUITranslations] = useState<UITranslations>(
     uiTranslations['Français']
   );
@@ -38,6 +41,11 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return currentUITranslations[key] || key;
   };
 
+  const clearTranslationCache = () => {
+    translationCache.clear();
+    console.log('Translation cache cleared');
+  };
+
   return (
     <LanguageContext.Provider
       value={{
@@ -50,6 +58,8 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setIsTranslating,
         translationProgress,
         setTranslationProgress,
+        translationCache,
+        clearTranslationCache,
       }}
     >
       {children}

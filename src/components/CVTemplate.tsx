@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { Download, Languages } from 'lucide-react';
 import { CV_DATA } from '../data/cvData';
@@ -6,7 +6,7 @@ import PrintableCVContent from './PrintableCVContent';
 import type { CVData } from '../types/cv';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTranslate } from '../hooks/useTranslate';
-import Spinner from './Spinner';
+import { translationService } from '../services/translationService';
 import { rebuildJSON } from '../utils/chunkHelpers';
 
 interface CVTemplateProps {
@@ -15,17 +15,46 @@ interface CVTemplateProps {
 
 const CVTemplate: React.FC<CVTemplateProps> = ({ data = CV_DATA }) => {
   const componentRef = useRef<HTMLDivElement>(null);
-  const { currentLanguage, setLanguage, translatedCV, setTranslatedCV, t } = useLanguage();
-  const { translateStream, isTranslating, progress } = useTranslate();
+  const { currentLanguage, setLanguage, translatedCV, setTranslatedCV, t, translationCache, isTranslating, setIsTranslating } = useLanguage();
+  const { translateStream, progress } = useTranslate();
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   const displayData = translatedCV || data;
 
   useEffect(() => {
-    if (currentLanguage === 'Français') {
-      setTranslatedCV(null);
+    if (!hasInitialized) {
+      setHasInitialized(true);
       return;
     }
 
+    if (currentLanguage === 'Français') {
+      setTranslatedCV(null);
+      setIsTranslating(false);
+      return;
+    }
+
+    // Check in-memory cache first
+    const cacheKey = `${currentLanguage}:${JSON.stringify(data).substring(0, 100)}`;
+    if (translationCache.has(cacheKey)) {
+      console.log(`Using in-memory cache for ${currentLanguage}`);
+      setTranslatedCV(translationCache.get(cacheKey)!);
+      setIsTranslating(false);
+      return;
+    }
+
+    // Check localStorage cache
+    const cachedTranslation = translationService.getCached(data, currentLanguage);
+    if (cachedTranslation) {
+      console.log(`Using localStorage cache for ${currentLanguage}`);
+      setTranslatedCV(cachedTranslation);
+      translationCache.set(cacheKey, cachedTranslation);
+      setIsTranslating(false);
+      return;
+    }
+
+    // No cache found, translate
+    console.log(`Translating to ${currentLanguage}...`);
+    setIsTranslating(true);
     let assembledText = '';
     let abortTranslation: (() => void) | null = null;
 
@@ -43,13 +72,16 @@ const CVTemplate: React.FC<CVTemplateProps> = ({ data = CV_DATA }) => {
       },
       (result) => {
         setTranslatedCV(result);
+        translationCache.set(cacheKey, result);
+        translationService.setCached(data, currentLanguage, result);
+        setIsTranslating(false);
       }
     );
 
     return () => {
       if (abortTranslation) abortTranslation();
     };
-  }, [currentLanguage, data]);
+  }, [currentLanguage, data, hasInitialized]);
 
 
 
@@ -90,22 +122,6 @@ const CVTemplate: React.FC<CVTemplateProps> = ({ data = CV_DATA }) => {
     setTranslatedCV(null);
   };
 
-  if (isTranslating && progress.percentage < 10) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
-        <div className="text-center">
-          <Spinner />
-          <p className="mt-4 text-gray-600">{t('translating')}</p>
-          {progress.total > 0 && (
-            <p className="text-sm text-gray-500 mt-2">
-              {progress.current} / {progress.total} chunks ({progress.percentage}%)
-            </p>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 relative overflow-hidden">
       {/* Background Geometric Shapes */}
@@ -116,7 +132,7 @@ const CVTemplate: React.FC<CVTemplateProps> = ({ data = CV_DATA }) => {
         <div className="absolute top-1/3 right-1/4 w-20 h-20 bg-indigo-200 transform rotate-12 opacity-20"></div>
       </div>
 
-      {isTranslating && progress.percentage >= 10 && (
+      {isTranslating && (
         <div className="no-print fixed top-20 left-1/2 transform -translate-x-1/2 z-50 bg-white px-6 py-3 rounded-lg shadow-lg border border-gray-200">
           <div className="flex items-center gap-3">
             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>

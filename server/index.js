@@ -33,11 +33,50 @@ app.use(express.json({ limit: "20mb" }));
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const primaryModel = genAI.getGenerativeModel({
-  model: "models/gemini-2.0-flash-exp"
+  model: "models/gemini-2.5-flash"
 });
 
 const fallbackModel = genAI.getGenerativeModel({
   model: "models/gemini-1.5-flash"
+});
+
+// Persistent translation cache (survives server restarts)
+const translationStore = new Map();
+const CACHE_FILE = './translation-cache.json';
+
+// Load cache from file on startup
+try {
+  const fs = await import('fs');
+  if (fs.existsSync(CACHE_FILE)) {
+    const cacheData = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf-8'));
+    Object.entries(cacheData).forEach(([key, value]) => {
+      translationStore.set(key, value);
+    });
+    console.log(`Loaded ${translationStore.size} cached translations`);
+  }
+} catch (err) {
+  console.log('No cache file found, starting fresh');
+}
+
+// Save cache to file
+function saveCacheToFile() {
+  try {
+    import('fs').then(fs => {
+      const cacheObj = Object.fromEntries(translationStore);
+      fs.writeFileSync(CACHE_FILE, JSON.stringify(cacheObj, null, 2));
+    });
+  } catch (err) {
+    console.error('Failed to save cache:', err);
+  }
+}
+
+// Auto-save cache every 5 minutes
+setInterval(saveCacheToFile, 5 * 60 * 1000);
+
+// Save cache on exit
+process.on('SIGINT', () => {
+  saveCacheToFile();
+  process.exit();
 });
 
 const chunkCache = new Map();
@@ -100,6 +139,12 @@ async function withRetryAndFallback(fn, retries = 4) {
 async function translateChunk(text, targetLang, model = primaryModel) {
   const cacheKey = `${targetLang}:${text.substring(0, 50)}`;
 
+  // Check persistent cache first
+  if (translationStore.has(cacheKey)) {
+    return translationStore.get(cacheKey);
+  }
+
+  // Check in-memory cache
   if (chunkCache.has(cacheKey)) {
     return chunkCache.get(cacheKey);
   }
@@ -127,7 +172,15 @@ ${text}
   });
 
   const translated = result.response.text().trim();
+
+  // Store in both caches
   chunkCache.set(cacheKey, translated);
+  translationStore.set(cacheKey, translated);
+
+  // Periodically save to disk (debounced)
+  if (translationStore.size % 10 === 0) {
+    saveCacheToFile();
+  }
 
   return translated;
 }
