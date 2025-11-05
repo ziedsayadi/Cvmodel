@@ -154,11 +154,7 @@ const CVTemplate: React.FC<CVTemplateProps> = ({ data = CV_DATA }) => {
               backgroundPosition: 'right 0.75rem center',
             }}
           >
-<<<<<<< HEAD
             <option value="French">Français</option>
-=======
-            <option value="Français">Français</option>
->>>>>>> faadcf2 (ùtest commit)
             <option value="English">English</option>
             <option value="Arabic">العربية</option>
             <option value="German">Deutsch</option>
