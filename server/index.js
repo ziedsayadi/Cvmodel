@@ -33,12 +33,13 @@ app.use(express.json({ limit: "20mb" }));
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const primaryModel = genAI.getGenerativeModel({
-  model: "models/gemini-2.5-flash"
+  model: "models/gemini-2.0-flash-lite"
 });
 
 const fallbackModel = genAI.getGenerativeModel({
-  model: "models/gemini-1.5-flash"
+  model: "models/gemini-2.0-flash-lite-001"
 });
+
 
 // Persistent translation cache (survives server restarts)
 const translationStore = new Map();
