@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -403,3 +404,251 @@ app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
   console.log(`Test model at: http://localhost:${PORT}/api/test-model`);
 });
+=======
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 4000;
+
+// ---------------------------
+// ✅ CORS
+// ---------------------------
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:5175",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:5174",
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+  })
+);
+
+app.use(express.json({ limit: "20mb" }));
+
+// ---------------------------
+// ✅ MODELS — free tier compatible
+// ---------------------------
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+const primaryModel = genAI.getGenerativeModel({
+  model: "models/gemini-2.0-flash-lite"
+});
+
+
+console.log("✅ Using:", "models/gemini-2.0-flash-lite");
+
+// ---------------------------
+// ✅ Tiny chunk splitter (free tier safe)
+// ---------------------------
+function extractStrings(obj, prefix = "") {
+  const items = [];
+
+  for (const key in obj) {
+    const path = prefix ? `${prefix}.${key}` : key;
+    const value = obj[key];
+
+    if (typeof value === "string") {
+      items.push({ path, value });
+    } else if (Array.isArray(value)) {
+      value.forEach((v, i) => {
+        if (typeof v === "string") {
+          items.push({ path: `${path}[${i}]`, value: v });
+        } else if (typeof v === "object" && v !== null) {
+          items.push(...extractStrings(v, `${path}[${i}]`));
+        }
+      });
+    } else if (typeof value === "object" && value !== null) {
+      items.push(...extractStrings(value, path));
+    }
+  }
+
+  return items;
+}
+
+function setDeep(obj, path, value) {
+  const parts = path.replace(/\[(\d+)\]/g, '.$1').split('.');
+  let current = obj;
+
+  for (let i = 0; i < parts.length - 1; i++) {
+    current = current[parts[i]];
+  }
+
+  current[parts[parts.length - 1]] = value;
+}
+
+async function translateValue(text, targetLang, model) {
+  const prompt = `
+Translate to ${targetLang}. Return ONLY the translation:
+${text}
+`;
+
+  const result = await model.generateContent(prompt);
+  return result.response.text().trim();
+}
+
+app.post("/api/translate-stream", async (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+
+  try {
+    const { targetLang, data } = req.body;
+
+    const strings = extractStrings(data);
+    res.write(`event: start\ndata: ${JSON.stringify({ total: strings.length })}\n\n`);
+
+    const translatedData = structuredClone(data);
+
+    for (let i = 0; i < strings.length; i++) {
+      const { path, value } = strings[i];
+
+      const translated = await translateValue(value, targetLang, primaryModel);
+
+      setDeep(translatedData, path, translated);
+
+      res.write(
+        `event: chunk\ndata: ${JSON.stringify({
+          index: i,
+          path,
+          value: translated,
+          progress: Math.round(((i + 1) / strings.length) * 100)
+        })}\n\n`
+      );
+    }
+
+    res.write(
+      `event: done\ndata: ${JSON.stringify({ result: translatedData })}\n\n`
+    );
+    res.end();
+
+  } catch (error) {
+    res.write(`event: error\ndata: ${JSON.stringify({ error: error.message })}\n\n`);
+    res.end();
+  }
+});
+
+
+async function extractCVData(text) {
+  const prompt = `You are a CV parser. Return ONLY valid JSON matching exactly this schema:
+
+{
+  "personalInfo": { "fullName": "", "professionalTitle": "", "avatarUrl": "" },
+  "profile": "",
+  "contact": { "email": "", "phone": "", "location": "", "github": "", "linkedin": "" },
+  "skills": [],
+  "technologies": [{ "id": "", "title": "", "items": "" }],
+  "experiences": [{ "id": "", "jobTitle": "", "company": "", "missions": [] }],
+  "languages": [{ "name": "", "flag": "", "level": "" }],
+  "certifications": [{ "name": "", "issuer": "" }],
+  "customSections": [],
+  "sectionOrder": ["personal", "profile", "skills", "technologies", "experiences", "certifications", "languages"],
+  "sectionTitles": {
+    "profile": "Professional Profile",
+    "skills": "Skills",
+    "technologies": "Technical Environment",
+    "experiences": "Professional Experience",
+    "certifications": "Certifications",
+    "languages": "Languages"
+  }
+}
+
+RULES:
+- If a field is missing, fill with "" or [].
+- Extract ALL experiences & missions.
+- Generate unique IDs.
+
+CV TEXT:
+${text}
+`;
+
+  try {
+    const result = await primaryModel.generateContent(prompt);
+    let output = result.response.text().trim();
+
+    if (output.includes("```")) {
+      const match = output.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (match) output = match[1].trim();
+    }
+
+    const jsonMatch = output.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("No JSON extracted");
+
+    return JSON.parse(jsonMatch[0]);
+  } catch (err) {
+    console.error("CV extraction error:", err);
+    throw new Error("Failed to extract CV: " + err.message);
+  }
+}
+
+app.post("/api/extract-cv", async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text) return res.status(400).json({ error: "text is required" });
+
+    const cvData = await extractCVData(text);
+    res.json(cvData);
+  } catch (err) {
+    console.error("Extract CV endpoint:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/test-model", async (req, res) => {
+  try {
+    const result = await primaryModel.generateContent("Say 'Model is working!' in one sentence.");
+    res.json({
+      success: true,
+      response: result.response.text(),
+      model: "models/gemini-2.0-flash-lite",
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: err.message,
+      details: err.toString()
+    });
+  }
+});
+
+app.get("/api/list-models", async (req, res) => {
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1/models?key=${process.env.GEMINI_API_KEY}`
+    );
+
+    const data = await response.json();
+
+    if (data.error) {
+      return res.status(500).json({ success: false, error: data.error.message });
+    }
+
+    res.json({
+      success: true,
+      availableModels: data.models.map(m => m.name),
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`Test model at: http://localhost:${PORT}/api/test-model`);
+});
+>>>>>>> faadcf2 (ùtest commit)
