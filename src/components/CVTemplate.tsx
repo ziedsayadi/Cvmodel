@@ -5,8 +5,8 @@ import { CV_DATA } from '../data/cvData';
 import PrintableCVContent from './PrintableCVContent';
 import type { CVData } from '../types/cv';
 import { useLanguage } from '../contexts/LanguageContext';
-import { useTranslate } from '../hooks/useTranslate';
-import { translationService } from '../services/translationService';
+import { useImprovedTranslate } from '../hooks/useImprovedTranslate';
+import { translationService } from '../services/improvedTranslationService';
 import { rebuildJSON } from '../utils/chunkHelpers';
 
 interface CVTemplateProps {
@@ -16,7 +16,7 @@ interface CVTemplateProps {
 const CVTemplate: React.FC<CVTemplateProps> = ({ data = CV_DATA }) => {
   const componentRef = useRef<HTMLDivElement>(null);
   const { currentLanguage, setLanguage, translatedCV, setTranslatedCV, t, translationCache, isTranslating, setIsTranslating } = useLanguage();
-  const { translateStream, progress } = useTranslate();
+  const { translateStream, progress } = useImprovedTranslate();
   const [hasInitialized, setHasInitialized] = useState(false);
 
   const displayData = translatedCV || data;

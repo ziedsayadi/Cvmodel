@@ -1,0 +1,12 @@
+{
+  "English_2lex3k": {
+    "timestamp": 1762338144660,
+    "language": "English",
+    "file": "English_2lex3k.json"
+  },
+  "Arabic_2lex3k": {
+    "timestamp": 1762338170873,
+    "language": "Arabic",
+    "file": "Arabic_2lex3k.json"
+  }
+}

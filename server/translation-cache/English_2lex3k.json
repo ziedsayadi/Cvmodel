@@ -1,0 +1,161 @@
+{
+  "personalInfo": {
+    "fullName": "Alaeddine Aloui",
+    "professionalTitle": "PHP / Drupal Developer",
+    "avatarUrl": ""
+  },
+  "profile": "",
+  "contact": {
+    "email": "alaeddin.aloui@gmail.com",
+    "phone": "(+216) 23 440 250",
+    "location": "",
+    "github": "",
+    "linkedin": ""
+  },
+  "skills": [
+    "Development of custom Drupal modules and themes",
+    "Integration and consumption of REST APIs",
+    "Performance optimization and evolutive maintenance"
+  ],
+  "technologies": [
+    {
+      "id": "tech-1",
+      "title": "Langages & Web",
+      "items": "PHP, JavaScript (React, ES6+), CSS3, HTML5, XML, Twig, API REST, jQuery, Ajax"
+    },
+    {
+      "id": "tech-2",
+      "title": "CMS & Frameworks",
+      "items": "Drupal 8/9/10, WordPress, Symfony, Commerce 3"
+    },
+    {
+      "id": "tech-3",
+      "title": "Bases de données & Search",
+      "items": "MySQL, PostgreSQL, Elasticsearch"
+    },
+    {
+      "id": "tech-4",
+      "title": "Outils & DevOps",
+      "items": "Docker, Git, Composer, Drush, CI/CD, PhpSpreadsheet, RabbitMQ"
+    },
+    {
+      "id": "tech-5",
+      "title": "Drupal Specific",
+      "items": "Views, Form API, workflows personnalisés, custom modules, webform"
+    },
+    {
+      "id": "tech-6",
+      "title": "WordPress Specific",
+      "items": "ACF"
+    },
+    {
+      "id": "tech-7",
+      "title": "CSS Frameworks",
+      "items": "TailwindCSS"
+    }
+  ],
+  "experiences": [
+    {
+      "id": "exp-1",
+      "jobTitle": "Développeur Drupal",
+      "company": "COCCINET",
+      "missions": [
+        "Objectif: Conception et développement d’une plateforme e-commerce B2B sous Drupal 10 pour La Poste et la SNCF.",
+        "Mise en place d'une architecture multi-clients avec gestion avancée des accès, personnalisation dynamique des contenus et adaptation des prix selon le rôle utilisateur.",
+        "Personnalisation du checkout pane et mise en place de workflows métiers spécifiques pour les commandes (optimisation du processus de commande).",
+        "Conception d’interfaces utilisateur personnalisées adaptées aux besoins clients.",
+        "Génération d’exports Excel automatisés accessibles également aux comptes superviseurs (amélioration du suivi et reporting).",
+        "Intégrer Elasticsearch."
+      ]
+    },
+    {
+      "id": "exp-2",
+      "jobTitle": "Développeur Drupal",
+      "company": "COCCINET",
+      "missions": [
+        "Objectif: Développement complet d'une plateforme de soumission et de vote pour le concours New European Bauhaus Prizes. Mise en place de systèmes de soumission de projets, évaluation par experts, vote public sécurisé, et suivi des résultats en temps réel.",
+        "Développement back-end/front-end.",
+        "Mise en place d'un workflow d'évaluation par les experts.",
+        "Génération des PDF lourds avec RabbitMQ.",
+        "Attribution automatique des projets aux évaluateurs.",
+        "Interface dédiée pour la notation et les commentaires internes.",
+        "Migration de Drupal 9 vers Drupal 10."
+      ]
+    },
+    {
+      "id": "exp-3",
+      "jobTitle": "Développeur PHP",
+      "company": "PI2R",
+      "missions": [
+        "Objectif: Reprise technique et graphique des sites E-Nymphea Collexion (solution SaaS de réservation en ligne pour spas et centres de bien-être), avec uniformisation de la base technique, migration vers PHP 7.4, et optimisation des performances.",
+        "Migration de la plateforme existante vers PHP 7.4.",
+        "Refonte graphique de plusieurs sites clients tout en respectant l'identité visuelle propre à chaque établissement.",
+        "Optimisation des performances."
+      ]
+    },
+    {
+      "id": "exp-4",
+      "jobTitle": "Développeur WordPress",
+      "company": "PI2R",
+      "missions": [
+        "Objectif: Développement sur mesure d’un site web offrant une solution clé en main aux établissements de santé en France pour évaluer et optimiser leur performance en responsabilité sociétale des entreprises (RSE).",
+        "Développement des templates sur mesures.",
+        "Développement de plugins personnalisés, incluant l'intégration de DocuSign avec Ultimate Member pour l'inscription des utilisateurs.",
+        "Génération de PDF automatisée via un plugin WordPress sur mesure."
+      ]
+    },
+    {
+      "id": "exp-5",
+      "jobTitle": "Développeur WordPress",
+      "company": "PI2R",
+      "missions": [
+        "Objectif: Développement d'une plateforme de formations en électrotechnique pour Formapelec, avec un thème personnalisé utilisant TailwindCSS.",
+        "Consommation de flux ERP (formations/sessions) avec synchronisation via CRON.",
+        "Développement de filtres personnalisés pour les formations et sessions.",
+        "Génération de fiches formations en PDF.",
+        "Création de templates sur mesure."
+      ]
+    },
+    {
+      "id": "exp-6",
+      "jobTitle": "Webmaster",
+      "company": "GSRD Tunis",
+      "missions": [
+        "Objectif: Maintenance site web de la société et assistance premier niveau des enseignants et direction.",
+        "Aide immédiate aux utilisateurs, installation de matériels et la maintenance de premier niveau.",
+        "Rédaction et intégration de contenus illustratifs, vidéos etc, sous format SEO."
+      ]
+    }
+  ],
+  "languages": [
+    {
+      "name": "Français",
+      "flag": "",
+      "level": "courant"
+    },
+    {
+      "name": "Anglais",
+      "flag": "",
+      "level": "B1"
+    }
+  ],
+  "certifications": [],
+  "customSections": [],
+  "sectionOrder": [
+    "personal",
+    "profile",
+    "skills",
+    "technologies",
+    "experiences",
+    "certifications",
+    "languages"
+  ],
+  "sectionTitles": {
+    "profile": "Professional Profile",
+    "skills": "Skills",
+    "technologies": "Technical Environment",
+    "experiences": "Professional Experience",
+    "certifications": "Certifications",
+    "languages": "Languages"
+  }
+}

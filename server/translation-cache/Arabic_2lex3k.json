@@ -1,0 +1,161 @@
+{
+  "personalInfo": {
+    "fullName": "علاء الدين العلوي",
+    "professionalTitle": "مطور PHP / Drupal",
+    "avatarUrl": ""
+  },
+  "profile": "",
+  "contact": {
+    "email": "alaeddin.aloui@gmail.com",
+    "phone": "(+216) 23 440 250",
+    "location": "",
+    "github": "",
+    "linkedin": ""
+  },
+  "skills": [
+    "تطوير وحدات وقوالب دروبال مخصصة",
+    "تكامل واستهلاك واجهات برمجة تطبيقات REST",
+    "تحسين الأداء والصيانة التطورية"
+  ],
+  "technologies": [
+    {
+      "id": "tech-1",
+      "title": "اللغات والويب",
+      "items": "PHP, JavaScript (React, ES6+), CSS3, HTML5, XML, Twig, API REST, jQuery, Ajax"
+    },
+    {
+      "id": "tech-2",
+      "title": "CMS & Frameworks",
+      "items": "Drupal 8/9/10, WordPress, Symfony, Commerce 3"
+    },
+    {
+      "id": "tech-3",
+      "title": "قواعد البيانات والبحث",
+      "items": "MySQL, PostgreSQL, Elasticsearch"
+    },
+    {
+      "id": "tech-4",
+      "title": "الأدوات و DevOps",
+      "items": "Docker, Git, Composer, Drush, CI/CD, PhpSpreadsheet, RabbitMQ"
+    },
+    {
+      "id": "tech-5",
+      "title": "Drupal Specific",
+      "items": "Views, Form API, workflows personnalisés, custom modules, webform"
+    },
+    {
+      "id": "tech-6",
+      "title": "WordPress Specific",
+      "items": "ACF"
+    },
+    {
+      "id": "tech-7",
+      "title": "CSS Frameworks",
+      "items": "TailwindCSS"
+    }
+  ],
+  "experiences": [
+    {
+      "id": "exp-1",
+      "jobTitle": "مطور دروبال",
+      "company": "COCCINET",
+      "missions": [
+        "الهدف: تصميم وتطوير منصة تجارة إلكترونية B2B تحت Drupal 10 لـ La Poste و SNCF.",
+        "إنشاء بنية متعددة العملاء مع إدارة وصول متقدمة ، وتخصيص ديناميكي للمحتوى وتكييف الأسعار وفقًا لدور المستخدم.",
+        "تخصيص لوحة الخروج وتنفيذ سير عمل تجارية محددة للأوامر (تحسين عملية الطلب).",
+        "تصميم واجهات مستخدم مخصصة تتكيف مع احتياجات العملاء.",
+        "إنشاء صادرات Excel آلية يمكن الوصول إليها أيضًا لحسابات المشرفين (تحسين المتابعة وإعداد التقارير).",
+        "تكامل Elasticsearch."
+      ]
+    },
+    {
+      "id": "exp-2",
+      "jobTitle": "مطور دروبال",
+      "company": "COCCINET",
+      "missions": [
+        "الهدف: التطوير الكامل لمنصة إرسال وتصويت لمسابقة New European Bauhaus Prizes. إنشاء أنظمة إرسال المشاريع وتقييم الخبراء والتصويت العام الآمن ومتابعة النتائج في الوقت الفعلي.",
+        "تطوير الواجهة الخلفية / الأمامية.",
+        "تنفيذ سير عمل التقييم من قبل الخبراء.",
+        "إنشاء ملفات PDF الثقيلة باستخدام RabbitMQ.",
+        "تخصيص المشاريع تلقائيًا للمقيمين.",
+        "واجهة مخصصة للتصنيف والتعليقات الداخلية.",
+        "ترحيل Drupal 9 إلى Drupal 10."
+      ]
+    },
+    {
+      "id": "exp-3",
+      "jobTitle": "مطور PHP",
+      "company": "PI2R",
+      "missions": [
+        "الهدف: الاستيلاء الفني والرسومي على مواقع E-Nymphea Collexion (حل SaaS للحجز عبر الإنترنت لمنتجعات السبا ومراكز العافية) ، مع توحيد القاعدة الفنية ، والترحيل إلى PHP 7.4 ، وتحسين الأداء.",
+        "ترحيل النظام الأساسي الحالي إلى PHP 7.4.",
+        "إعادة تصميم رسومية للعديد من مواقع العملاء مع احترام الهوية المرئية الخاصة بكل مؤسسة.",
+        "تحسين الأداء."
+      ]
+    },
+    {
+      "id": "exp-4",
+      "jobTitle": "مطور ووردبريس",
+      "company": "PI2R",
+      "missions": [
+        "الهدف: التطوير المخصص لموقع ويب يقدم حلاً جاهزًا للمؤسسات الصحية في فرنسا لتقييم وتحسين أدائها في مجال المسؤولية الاجتماعية للشركات (CSR).",
+        "تطوير القوالب المصممة خصيصًا.",
+        "تطوير المكونات الإضافية المخصصة ، بما في ذلك تكامل DocuSign مع Ultimate Member لتسجيل المستخدمين.",
+        "إنشاء PDF آلي عبر مكون إضافي مخصص لـ WordPress."
+      ]
+    },
+    {
+      "id": "exp-5",
+      "jobTitle": "مطور ووردبريس",
+      "company": "PI2R",
+      "missions": [
+        "الهدف: تطوير منصة تدريب في الهندسة الكهربائية لـ Formapelec ، مع سمة مخصصة تستخدم TailwindCSS.",
+        "استهلاك تدفقات ERP (التدريب / الجلسات) مع المزامنة عبر CRON.",
+        "تطوير عوامل تصفية مخصصة للتدريب والجلسات.",
+        "إنشاء أوراق تدريب بتنسيق PDF.",
+        "إنشاء قوالب مخصصة."
+      ]
+    },
+    {
+      "id": "exp-6",
+      "jobTitle": "Webmaster",
+      "company": "GSRD Tunis",
+      "missions": [
+        "الهدف: صيانة موقع الشركة والمساعدة من المستوى الأول للمعلمين والإدارة.",
+        "مساعدة فورية للمستخدمين ، وتركيب المعدات والصيانة من المستوى الأول.",
+        "كتابة وتكامل المحتوى التوضيحي ومقاطع الفيديو وما إلى ذلك ، بتنسيق SEO."
+      ]
+    }
+  ],
+  "languages": [
+    {
+      "name": "الفرنسية",
+      "flag": "",
+      "level": "جاري"
+    },
+    {
+      "name": "الإنجليزية",
+      "flag": "",
+      "level": "B1"
+    }
+  ],
+  "certifications": [],
+  "customSections": [],
+  "sectionOrder": [
+    "personal",
+    "profile",
+    "skills",
+    "technologies",
+    "experiences",
+    "certifications",
+    "languages"
+  ],
+  "sectionTitles": {
+    "profile": "Professional Profile",
+    "skills": "Skills",
+    "technologies": "Technical Environment",
+    "experiences": "Professional Experience",
+    "certifications": "Certifications",
+    "languages": "Languages"
+  }
+}
